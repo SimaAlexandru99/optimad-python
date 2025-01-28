@@ -10,37 +10,70 @@ from ttkthemes import ThemedTk
 from utils.helpers import Logger, SystemUtils, ScreenshotManager
 
 class ScreenshotApp:
+    # Configurări aplicație
+    WINDOW_SIZE = "700x500"
+    THEME = "arc"
+    TITLE = "Optimad"
+
+    # Configurări intervale și timpi
+    INITIAL_COUNTDOWN = 15  # secunde până la primul screenshot
+    COUNTDOWN_CHECK_INTERVAL = 0.1  # interval verificare pentru countdown
+    THREAD_CLEANUP_TIMEOUT = 0.5  # timp așteptare pentru cleanup thread
+
+    # Configurări UI
+    ENTRY_WIDTH = 30
+    PROGRESS_BAR_LENGTH = 400
+
+    # Configurări font
+    FONTS = {
+        'header': ('Arial', 12),
+        'normal': ('Arial', 10),
+        'option': ('Arial', 11)
+    }
+
+    # Mapare aplicații
+    APP_NAMES = {
+        "zoom": "Zoom",
+        "teams": "Microsoft Teams",
+        "chrome": "Google Chrome"
+    }
+
     def __init__(self):
         self.logger = Logger()
         self.system_utils = SystemUtils()
         self.stop_requested = False
         self.is_running = False
         self.process_thread = None
-
-        # Event for controlling the process
         self.stop_event = threading.Event()
 
         self.setup_ui()
 
     def setup_ui(self):
-        self.app = ThemedTk(theme="arc")
-        self.app.title("Optimad")
-        self.app.geometry("700x500")
+        self.app = ThemedTk(theme=self.THEME)
+        self.app.title(self.TITLE)
+        self.app.geometry(self.WINDOW_SIZE)
 
-        # Import ttk for styles
-        from tkinter import ttk
+        # Configure style
+        style = ttk.Style()
+        style.configure('Header.TLabel', font=self.FONTS['header'])
+        style.configure('Normal.TLabel', font=self.FONTS['normal'])
+        style.configure('Option.TRadiobutton', font=self.FONTS['option'])
 
-        # Variables
+        # Initialize variables
+        self._init_variables()
+
+        # Create UI elements
+        self._create_ui_elements()
+
+    def _init_variables(self):
+        """Initialize all UI variables"""
         self.hours_var = StringVar()
         self.screenshots_var = StringVar()
         self.status_var = StringVar(value="Pregătit")
         self.progress_var = IntVar()
         self.start_option = StringVar(value="now")
         self.start_time_var = StringVar()
-        self.app_choice = StringVar(value="zoom")  # Default to Zoom
-
-        # UI Elements
-        self._create_ui_elements()
+        self.app_choice = StringVar(value="zoom")
 
     def _create_ui_elements(self):
         # Configure styles for ttk widgets
@@ -252,24 +285,37 @@ class ScreenshotApp:
 
     def _countdown(self, seconds: int, message: str) -> bool:
         """
-        Countdown timer that can be interrupted using threading.Event
-        Returns False if stopped, True if completed normally.
+        Improved countdown timer that can be interrupted.
+        Uses precise timing and better error handling.
+
+        Args:
+            seconds: Number of seconds to count down
+            message: Message to display during countdown
+
+        Returns:
+            bool: True if countdown completed normally, False if interrupted
         """
-        end_time = time.time() + seconds
+        try:
+            end_time = time.time() + seconds
 
-        while time.time() < end_time:
-            if self.stop_event.is_set():
-                return False
+            while time.time() < end_time:
+                if self.stop_event.is_set():
+                    self.logger.log("Countdown interrupted")
+                    return False
 
-            remaining = int(end_time - time.time())
-            self.status_var.set(f"{message} {remaining}s")
-            self.app.update()
+                remaining = max(0, int(end_time - time.time()))
+                self.status_var.set(f"{message} {remaining}s")
+                self.app.update()
 
-            # Wait for 100ms or until stop_event is set
-            if self.stop_event.wait(timeout=0.1):
-                return False
+                # Use event wait instead of sleep for better responsiveness
+                if self.stop_event.wait(timeout=self.COUNTDOWN_CHECK_INTERVAL):
+                    return False
 
-        return True
+            return True
+
+        except Exception as e:
+            self.logger.log(f"Error in countdown: {e}")
+            return False
 
     def stop_process(self):
         """
