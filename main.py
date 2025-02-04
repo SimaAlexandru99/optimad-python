@@ -10,28 +10,28 @@ from ttkthemes import ThemedTk
 from utils.helpers import Logger, SystemUtils, ScreenshotManager
 
 class ScreenshotApp:
-    # Configurări aplicație
+    # Application configurations
     WINDOW_SIZE = "700x500"
     THEME = "arc"
     TITLE = "Optimad"
 
-    # Configurări intervale și timpi
-    INITIAL_COUNTDOWN = 15  # secunde până la primul screenshot
-    COUNTDOWN_CHECK_INTERVAL = 0.1  # interval verificare pentru countdown
-    THREAD_CLEANUP_TIMEOUT = 0.5  # timp așteptare pentru cleanup thread
+    # Interval and timing configurations
+    INITIAL_COUNTDOWN = 15  # seconds until first screenshot
+    COUNTDOWN_CHECK_INTERVAL = 0.1  # countdown check interval
+    THREAD_CLEANUP_TIMEOUT = 0.5  # thread cleanup wait time
 
-    # Configurări UI
+    # UI configurations
     ENTRY_WIDTH = 30
     PROGRESS_BAR_LENGTH = 400
 
-    # Configurări font
+    # Font configurations
     FONTS = {
         'header': ('Arial', 12),
         'normal': ('Arial', 10),
         'option': ('Arial', 11)
     }
 
-    # Mapare aplicații
+    # Application mapping
     APP_NAMES = {
         "zoom": "Zoom",
         "teams": "Microsoft Teams",
@@ -69,7 +69,7 @@ class ScreenshotApp:
         """Initialize all UI variables"""
         self.hours_var = StringVar()
         self.screenshots_var = StringVar()
-        self.status_var = StringVar(value="Pregătit")
+        self.status_var = StringVar(value="Ready")
         self.progress_var = IntVar()
         self.start_option = StringVar(value="now")
         self.start_time_var = StringVar()
@@ -86,17 +86,17 @@ class ScreenshotApp:
         input_frame = Frame(self.app)
         input_frame.pack(pady=10, padx=20, fill="x")
 
-        Label(input_frame, text="Numărul de ore de curs:", style='Header.TLabel').pack(pady=5)
+        Label(input_frame, text="Course hours:", style='Header.TLabel').pack(pady=5)
         Entry(input_frame, textvariable=self.hours_var, font=("Arial", 12), width=30).pack(pady=5)
 
-        Label(input_frame, text="Numărul de screenshot-uri:", style='Header.TLabel').pack(pady=5)
+        Label(input_frame, text="Number of screenshots:", style='Header.TLabel').pack(pady=5)
         Entry(input_frame, textvariable=self.screenshots_var, font=("Arial", 12), width=30).pack(pady=5)
 
         # App Selection Frame
         app_frame = Frame(self.app)
         app_frame.pack(pady=5, padx=20, fill="x")
 
-        Label(app_frame, text="Selectează aplicația:", style='Header.TLabel').pack(pady=5)
+        Label(app_frame, text="Select application:", style='Header.TLabel').pack(pady=5)
 
         app_options_frame = Frame(app_frame)
         app_options_frame.pack()
@@ -112,14 +112,14 @@ class ScreenshotApp:
         options_frame = Frame(self.app)
         options_frame.pack(pady=10, padx=20, fill="x")
 
-        Radiobutton(options_frame, text="Pornește acum", variable=self.start_option,
+        Radiobutton(options_frame, text="Start now", variable=self.start_option,
                    value="now", command=self._toggle_time_input,
                    style='Option.TRadiobutton').pack(pady=5)
 
         time_frame = Frame(options_frame)
         time_frame.pack(pady=5)
 
-        Radiobutton(time_frame, text="Pornește la ora:", variable=self.start_option,
+        Radiobutton(time_frame, text="Start at:", variable=self.start_option,
                    value="scheduled", command=self._toggle_time_input,
                    style='Option.TRadiobutton').pack(side="left")
 
@@ -129,10 +129,10 @@ class ScreenshotApp:
         Label(time_frame, text="(Format: HH:MM)", style='Normal.TLabel').pack(side="left")
 
         # Control Buttons
-        self.start_button = Button(self.app, text="Pornește Procesul", command=self.start_process)
+        self.start_button = Button(self.app, text="Start Process", command=self.start_process)
         self.start_button.pack(pady=10)
 
-        self.stop_button = Button(self.app, text="Oprește Procesul", command=self.stop_process, state="disabled")
+        self.stop_button = Button(self.app, text="Stop Process", command=self.stop_process, state="disabled")
         self.stop_button.pack(pady=5)
 
         Label(self.app, textvariable=self.status_var, style='Normal.TLabel').pack(pady=10)
@@ -142,30 +142,30 @@ class ScreenshotApp:
         self.progress_bar.pack(pady=10)
 
     def _toggle_time_input(self):
-        if self.start_option.get() == "scheduled":
-            self.time_entry.config(state="normal")
-        else:
-            self.time_entry.config(state="disabled")
+        """Toggle time input field based on start option"""
+        self.time_entry.config(state="normal" if self.start_option.get() == "scheduled" else "disabled")
 
     def _validate_time_format(self, time_str: str) -> bool:
+        """Validate time string format"""
         try:
             datetime.strptime(time_str, "%H:%M")
             return True
         except ValueError:
             return False
 
-    def _wait_until_start_time(self, start_time: str):
+    def _wait_until_start_time(self, start_time: str) -> bool:
+        """Wait until the scheduled start time"""
         target_time = datetime.strptime(start_time, "%H:%M").time()
         while datetime.now().time() < target_time and not self.stop_requested:
             remaining = datetime.combine(datetime.today(), target_time) - datetime.now()
-            minutes = remaining.seconds // 60
-            seconds = remaining.seconds % 60
-            self.status_var.set(f"Așteptare până la {start_time} ({minutes:02d}:{seconds:02d})")
+            minutes, seconds = divmod(remaining.seconds, 60)
+            self.status_var.set(f"Waiting until {start_time} ({minutes:02d}:{seconds:02d})")
             self.app.update()
             time.sleep(1)
         return not self.stop_requested
 
     def start_process(self):
+        """Start the screenshot process"""
         if self.is_running:
             return
 
@@ -182,11 +182,10 @@ class ScreenshotApp:
 
             self.is_running = True
             self.stop_requested = False
-            self.stop_event.clear()  # Reset stop event
+            self.stop_event.clear()
             self.start_button.config(state="disabled")
             self.stop_button.config(state="normal")
 
-            # Create and start new process thread
             self.process_thread = threading.Thread(
                 target=self._run_scheduled_process,
                 args=(hours, screenshots)
@@ -199,6 +198,7 @@ class ScreenshotApp:
             self.status_var.set(f"Error: {str(e)}")
 
     def _run_scheduled_process(self, hours: int, screenshots: int):
+        """Run the scheduled screenshot process"""
         if self.start_option.get() == "scheduled":
             if not self._wait_until_start_time(self.start_time_var.get()):
                 self._cleanup()
@@ -207,57 +207,46 @@ class ScreenshotApp:
         self._process_screenshots(hours, screenshots)
 
     def _process_screenshots(self, hours: int, screenshots: int):
-        initial_date = datetime.now().strftime("%m/%d/%Y")
+        """Process screenshots with fixed date progression"""
+        initial_date = datetime.now()
         screenshot_mgr = ScreenshotManager(
-            datetime.now().strftime("%Y-%m-%d"),
+            initial_date.strftime("%Y-%m-%d"),
             self.logger
         )
 
-        # Map pentru numele aplicațiilor
-        app_names = {
-            "zoom": "Zoom",
-            "teams": "Microsoft Teams",
-            "chrome": "Google Chrome"
-        }
-        app_name = app_names.get(self.app_choice.get(), "Zoom")  # Default la Zoom dacă ceva nu merge
+        app_name = self.APP_NAMES.get(self.app_choice.get(), "Zoom")
 
         try:
             interval = (hours * 3600) // screenshots
             self._update_progress(0, screenshots)
+
+            current_date = initial_date
 
             for i in range(screenshots):
                 if self.stop_requested:
                     self.logger.log("Process stopped by user")
                     break
 
-                screenshot_date = datetime.now() + timedelta(days=i)
-
-                # Check stop flag before starting countdown
-                if self.stop_requested:
-                    break
-
+                # Set system date at the start of each iteration
                 if i > 0:
+                    current_date += timedelta(days=1)  # Increment date before setting system date
                     if self.stop_requested:
                         break
                     self.system_utils.set_system_date(
-                        screenshot_date.strftime("%m/%d/%Y"),
+                        current_date.strftime("%m/%d/%Y"),
                         self.logger
                     )
                 else:
                     if not self._countdown(15, "First screenshot in"):
                         break
 
-                # Check stop flag before focus and capture
-                if self.stop_requested:
-                    break
-
+                # Take screenshot with current date
                 if self.system_utils.focus_window(app_name, self.logger):
                     if self.stop_requested:
                         break
-                    screenshot_mgr.capture(screenshot_date)
+                    screenshot_mgr.capture(current_date)
                     self._update_progress(i + 1, screenshots)
 
-                # Check stop flag before next interval
                 if self.stop_requested:
                     break
 
@@ -265,36 +254,31 @@ class ScreenshotApp:
                     if not self._countdown(interval, "Next screenshot in"):
                         break
 
-        finally:
-            if self.stop_requested:
-                self.logger.log("Restoring initial date after stop")
-            self.system_utils.set_system_date(initial_date, self.logger)
-            self._cleanup()
+            return True
 
+        finally:
+            self.logger.log("Restoring initial date")
+            self.system_utils.set_system_date(
+                initial_date.strftime("%m/%d/%Y"),
+                self.logger
+            )
+            self._cleanup()
     def _cleanup(self):
+        """Clean up resources and reset UI state"""
         self.is_running = False
         self.stop_requested = False
         self.start_button.config(state="normal")
         self.stop_button.config(state="disabled")
-        self.status_var.set("Proces completat")
+        self.status_var.set("Process completed")
 
     def _update_progress(self, current: int, total: int):
+        """Update progress bar and status"""
         self.progress_var.set(int((current / total) * 100))
         self.status_var.set(f"Progress: {current}/{total}")
         self.app.update()
 
     def _countdown(self, seconds: int, message: str) -> bool:
-        """
-        Improved countdown timer that can be interrupted.
-        Uses precise timing and better error handling.
-
-        Args:
-            seconds: Number of seconds to count down
-            message: Message to display during countdown
-
-        Returns:
-            bool: True if countdown completed normally, False if interrupted
-        """
+        """Perform countdown with improved interruption handling"""
         try:
             end_time = time.time() + seconds
 
@@ -307,7 +291,6 @@ class ScreenshotApp:
                 self.status_var.set(f"{message} {remaining}s")
                 self.app.update()
 
-                # Use event wait instead of sleep for better responsiveness
                 if self.stop_event.wait(timeout=self.COUNTDOWN_CHECK_INTERVAL):
                     return False
 
@@ -318,29 +301,26 @@ class ScreenshotApp:
             return False
 
     def stop_process(self):
-        """
-        Immediately stops the process and updates the UI
-        """
+        """Stop the process and update UI"""
         self.logger.log("Stop requested - terminating process")
         self.stop_requested = True
-        self.stop_event.set()  # Signal all operations to stop
+        self.stop_event.set()
 
-        self.status_var.set("Se opreste...")
+        self.status_var.set("Stopping...")
         self.app.update()
 
-        # Wait briefly for thread to clean up
         if self.process_thread and self.process_thread.is_alive():
-            self.process_thread.join(timeout=0.5)
+            self.process_thread.join(timeout=self.THREAD_CLEANUP_TIMEOUT)
 
         self._cleanup()
-        self.status_var.set("Oprit")
+        self.status_var.set("Stopped")
         self.app.update()
 
-        # Reset thread
         self.process_thread = None
         self.logger.log("Process stopped successfully")
 
     def run(self):
+        """Start the application"""
         self.app.mainloop()
 
 if __name__ == "__main__":
