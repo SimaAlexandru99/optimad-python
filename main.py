@@ -43,10 +43,10 @@ class ScreenshotApp:
         "chrome": "Google Chrome"
     }
 
-    def __init__(self):
+    def __init__(self, logger=None, system_utils=None):
         """Initialize the application with required components and state"""
-        self.logger = Logger()
-        self.system_utils = SystemUtils()
+        self.logger = logger or Logger()
+        self.system_utils = system_utils or SystemUtils()
         self.stop_requested = False
         self.is_running = False
         self.process_thread = None
