@@ -107,3 +107,38 @@
 2025-02-20 20:58:31 - Zoom activated
 2025-02-20 20:58:31 - Screenshot saved to 2025-02-10\2025-02-20_20-58-28.png
 2025-02-10 20:58:31 - System date set to 02/10/2025
+2025-02-04 16:53:57 - Google Chrome activated
+2025-02-04 16:53:57 - Screenshot saved to 2025-02-04\2025-02-04_16-53-40.png
+2025-02-04 16:54:04 - Stop requested - terminating process
+2025-02-04 16:54:04 - System date set to 02/04/2025
+2025-02-04 16:54:04 - Process stopped successfully
+2025-02-04 16:54:12 - Invalid input: Screenshots must be between 1 and 100
+2025-02-04 16:54:37 - System date set to 02/04/2025
+2025-02-04 16:54:48 - Invalid input: Minimum interval between screenshots is 1 minute(s)
+2025-02-04 16:55:09 - System date set to 02/04/2025
+2025-02-04 16:55:18 - Invalid input: Minimum interval between screenshots is 1 minute(s)
+2025-02-04 16:55:26 - System date set to 02/04/2025
+2025-02-04 16:55:51 - Google Chrome activated
+2025-02-04 16:55:51 - Screenshot saved to 2025-02-04\2025-02-04_16-55-34.png
+2025-02-05 16:56:51 - System date set to 02/05/2025
+2025-02-05 16:56:54 - Google Chrome activated
+2025-02-05 16:56:54 - Screenshot saved to 2025-02-04\2025-02-05_16-55-34.png
+2025-02-06 16:57:54 - System date set to 02/06/2025
+2025-02-06 16:58:01 - Google Chrome activated
+2025-02-06 16:58:01 - Screenshot saved to 2025-02-04\2025-02-06_16-55-34.png
+2025-02-06 16:58:17 - Stop requested - terminating process
+2025-02-04 16:58:17 - System date set to 02/04/2025
+2025-02-04 16:58:18 - Process stopped successfully
+2025-02-04 16:58:19 - System date set to 02/04/2025
+2025-02-04 17:04:51 - Successfully focused Google Chrome window
+2025-02-04 17:04:52 - Screenshot successfully saved to H:\python-optimad\2025-02-04\2025-02-04_17-04-36.png
+2025-02-05 17:05:52 - System date successfully set to 02/05/2025
+2025-02-05 17:05:52 - Successfully focused Google Chrome window
+2025-02-05 17:05:52 - Screenshot successfully saved to H:\python-optimad\2025-02-04\2025-02-05_17-04-36.png
+2025-02-06 17:06:52 - System date successfully set to 02/06/2025
+2025-02-06 17:06:53 - Successfully focused Google Chrome window
+2025-02-06 17:06:54 - Screenshot successfully saved to H:\python-optimad\2025-02-04\2025-02-06_17-04-36.png
+2025-02-04 22:47:05 - Stop requested - terminating process
+2025-02-04 22:47:05 - System date successfully set to 02/04/2025
+2025-02-04 22:47:05 - Process stopped successfully
+2025-02-04 22:47:07 - System date successfully set to 02/04/2025
