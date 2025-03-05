@@ -8,6 +8,7 @@ from typing import Optional, Union, NoReturn
 import pyautogui
 from pywinauto import Desktop
 from pywinauto.findwindows import ElementNotFoundError
+import subprocess
 
 class Logger:
     """
@@ -84,12 +85,15 @@ class SystemUtils:
 
             # Set date based on operating system
             if os.name == 'nt':  # Windows
-                result = os.system(f'date {new_date}')
+                # Use PowerShell to set date with elevation
+                cmd = f'powershell -Command "Start-Process cmd -Verb RunAs -WindowStyle Hidden -ArgumentList \'/c date {new_date}\'"'
+                result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+                if result.returncode != 0:
+                    raise OSError(f"Failed to set system date. Exit code: {result.returncode}\nError: {result.stderr}")
             else:  # Unix-like systems
                 result = os.system(f'sudo date -s "{new_date}"')
-
-            if result != 0:
-                raise OSError(f"Failed to set system date. Exit code: {result}")
+                if result != 0:
+                    raise OSError(f"Failed to set system date. Exit code: {result}")
 
             logger.log(f"System date successfully set to {new_date}")
             return True
