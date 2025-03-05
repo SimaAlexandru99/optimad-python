@@ -14,3 +14,6 @@ six==1.17.0
 TKinterModernThemes==1.10.4
 ttkbootstrap==1.10.1
 ttkthemes==3.2.2
+pyautogui
+Pillow
+winsound

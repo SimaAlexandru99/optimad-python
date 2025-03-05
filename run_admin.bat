@@ -1,36 +1,61 @@
 @echo off
-REM Check for admin privileges and elevate if needed
+chcp 65001 > nul
+setlocal enabledelayedexpansion
+color 0A
+
+:: Verifica daca ruleaza ca administrator
 >nul 2>&1 "%SYSTEMROOT%\system32\cacls.exe" "%SYSTEMROOT%\system32\config\system"
-if '%errorlevel%' NEQ '0' (
-    echo Requesting administrative privileges...
-    goto UACPrompt
-) else ( goto gotAdmin )
-
-:UACPrompt
-    echo Set UAC = CreateObject^("Shell.Application"^) > "%temp%\getadmin.vbs"
-    echo UAC.ShellExecute "%~s0", "", "", "runas", 1 >> "%temp%\getadmin.vbs"
-    "%temp%\getadmin.vbs"
-    exit /B
-
-:gotAdmin
-    if exist "%temp%\getadmin.vbs" ( del "%temp%\getadmin.vbs" )
-    pushd "%CD%"
-    CD /D "%~dp0"
-
-REM Get the directory where the batch file is located
-set "SCRIPT_DIR=%~dp0"
-
-REM Check if virtual environment exists
-if exist "%SCRIPT_DIR%.venv\Scripts\activate.bat" (
-    call "%SCRIPT_DIR%.venv\Scripts\activate.bat"
-    echo Virtual environment activated
-) else (
-    echo Virtual environment not found. Running setup...
-    python setup.py
-    call "%SCRIPT_DIR%.venv\Scripts\activate.bat"
+IF %ERRORLEVEL% NEQ 0 (
+    echo [91mATENTIE: Aplicatia necesita drepturi de administrator![0m
+    echo [93mSe solicita drepturi de administrator...[0m
+    
+    :: Creeaza un script VBScript temporar pentru a obtine drepturi administrative
+    echo Set objShell = CreateObject^("Shell.Application"^) > "%temp%\elevate.vbs"
+    echo objShell.ShellExecute "cmd.exe", "/c cd /d ""%~dp0"" && ""%~f0""", "", "runas", 1 >> "%temp%\elevate.vbs"
+    
+    :: Ruleaza scriptul VBScript si iesi
+    start "" "%temp%\elevate.vbs"
+    del "%temp%\elevate.vbs"
+    exit /b
 )
 
-REM Run the main application
-python "%SCRIPT_DIR%main.py"
+:: Acum rulam ca administrator
+cls
+echo [92m======================================================[0m
+echo [92m           OPTIMAD - RULEAZA CA ADMINISTRATOR         [0m
+echo [92m======================================================[0m
+echo.
+echo [95mATENTIE: Aceasta aplicatie modifica data sistemului![0m
+echo.
+cd /d "%~dp0"
 
+:: Seteaza calea catre mediul virtual si scriptul principal
+set "VENV_PATH=%~dp0.venv"
+set "ACTIVATE=%VENV_PATH%\Scripts\activate.bat"
+set "MAIN_SCRIPT=%~dp0main.py"
+
+:: Verifica daca mediul virtual exista, il creeaza daca este necesar
+if not exist "%ACTIVATE%" (
+    echo [96mSe creeaza mediul virtual...[0m
+    python setup.py
+    if not exist "%ACTIVATE%" (
+        echo [91mEsec la crearea mediului virtual![0m
+        pause
+        exit /b 1
+    )
+)
+
+:: Activeaza mediul virtual si ruleaza aplicatia
+call "%ACTIVATE%"
+echo [92mMediul virtual activat[0m
+echo.
+echo [96mSe executa aplicatia...[0m
+echo [93mCapturile de ecran vor fi salvate in directoarele AAAA-LL-ZZ din acest director.[0m
+echo.
+
+python "%MAIN_SCRIPT%"
+
+echo.
+echo [92mAplicatia s-a incheiat.[0m
+echo.
 pause
