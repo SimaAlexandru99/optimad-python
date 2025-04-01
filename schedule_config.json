@@ -1,0 +1,9 @@
+{
+  "start_option": "daily",
+  "start_time": "18:10",
+  "hours": "2",
+  "screenshots": "10",
+  "app_choice": "desktop",
+  "last_run": null,
+  "is_scheduled_daily": true
+}

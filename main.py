@@ -1,15 +1,15 @@
 from datetime import datetime, timedelta
 import threading
 import time
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Dict, Any
 import os
 import json
 import sys
 import ctypes
 from pathlib import Path
 from tkinter import IntVar, StringVar, BooleanVar, PhotoImage, messagebox
-import ttkbootstrap as tb
-from ttkbootstrap.constants import *
+import ttkbootstrap as tb  # type: ignore
+from ttkbootstrap.constants import * # type: ignore
 
 from utils.helpers import Logger, SystemUtils, ScreenshotManager
 from utils.constants import *  # Import all constants
@@ -37,6 +37,7 @@ class ScreenshotApp:
         self.stop_event = threading.Event()
         self.theme = self._load_theme()
         self.notification_visible = False
+        self.schedule_config = self._load_schedule_config()
         self.setup_ui()
 
     def _load_theme(self):
@@ -64,6 +65,85 @@ class ScreenshotApp:
                 pass
         
         return theme
+        
+    def _load_schedule_config(self) -> Dict[str, Any]:
+        """Load scheduling configuration from file"""
+        config_path = Path(SCHEDULE_CONFIG_FILENAME)
+        default_config = {
+            "start_option": DEFAULT_START_OPTION,
+            "start_time": DEFAULT_START_TIME,
+            "hours": DEFAULT_HOURS,
+            "screenshots": DEFAULT_SCREENSHOTS,
+            "app_choice": DEFAULT_APP_CHOICE,
+            "last_run": None,
+            "is_scheduled_daily": DEFAULT_START_OPTION == "daily"
+        }
+        
+        if not config_path.exists():
+            # Create default config file if it doesn't exist
+            try:
+                with open(config_path, "w", encoding="utf-8") as f:
+                    json.dump(default_config, f, indent=2)
+            except Exception as e:
+                self.logger.log(f"Eroare la crearea fișierului de configurare: {e}")
+            
+            return default_config
+            
+        # Load existing config
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                config = json.load(f)
+                # Ensure all default fields exist
+                for key, value in default_config.items():
+                    if key not in config:
+                        config[key] = value
+            return config
+        except Exception as e:
+            self.logger.log(f"Eroare la încărcarea configurației: {e}")
+            return default_config
+    
+    def _save_schedule_config(self) -> bool:
+        """Save current scheduling configuration to file"""
+        config_path = Path(SCHEDULE_CONFIG_FILENAME)
+        
+        # Update config with current UI values
+        self.schedule_config.update({
+            "start_option": self.start_option.get(),
+            "start_time": self.start_time_var.get(),
+            "hours": self.hours_var.get(),
+            "screenshots": self.screenshots_var.get(),
+            "app_choice": self.app_choice.get(),
+            "is_scheduled_daily": self.start_option.get() == "daily"
+        })
+        
+        try:
+            with open(config_path, "w", encoding="utf-8") as f:
+                json.dump(self.schedule_config, f, indent=2)
+            return True
+        except Exception as e:
+            self.logger.log(f"Eroare la salvarea configurației: {e}")
+            return False
+
+    def _save_and_notify(self):
+        """Save configuration and notify the user"""
+        success = self._save_schedule_config()
+        
+        if success:
+            messagebox.showinfo(
+                "Configurație salvată", 
+                "Configurația de programare a fost salvată cu succes."
+            )
+            
+            if self.start_option.get() == "daily":
+                # Update next run time display
+                next_run = self._calculate_next_daily_run()
+                if next_run:
+                    self.next_run_var.set(next_run.strftime("%d-%m-%Y %H:%M"))
+        else:
+            messagebox.showerror(
+                "Eroare salvare", 
+                "Nu s-a putut salva configurația. Verificați jurnalul pentru mai multe informații."
+            )
 
     def setup_ui(self):
         """Set up the user interface components"""
@@ -94,13 +174,13 @@ class ScreenshotApp:
 
     def _init_variables(self):
         """Initialize all UI variables"""
-        self.hours_var = StringVar()
-        self.screenshots_var = StringVar()
+        self.hours_var = StringVar(value=DEFAULT_HOURS)
+        self.screenshots_var = StringVar(value=DEFAULT_SCREENSHOTS)
         self.status_var = StringVar(value="Gata")
         self.progress_var = IntVar()
-        self.start_option = StringVar(value="now")
-        self.start_time_var = StringVar()
-        self.app_choice = StringVar(value="zoom")
+        self.start_option = StringVar(value=DEFAULT_START_OPTION)
+        self.start_time_var = StringVar(value=DEFAULT_START_TIME)
+        self.app_choice = StringVar(value=DEFAULT_APP_CHOICE)
 
     def _create_content_area(self):
         """Create main content area with tabbed interface"""
@@ -146,7 +226,7 @@ class ScreenshotApp:
         for i, (key, name) in enumerate(SUPPORTED_APPS.items()):
             tb.Radiobutton(
                 app_frame, text=name, variable=self.app_choice,
-                value=key, bootstyle="primary"
+                value=key, bootstyle="primary"  # type: ignore
             ).pack(side=LEFT, padx=10)
         
         # ===== Right Frame Content =====
@@ -155,22 +235,43 @@ class ScreenshotApp:
         start_frame.pack(fill=X)
         
         tb.Radiobutton(
-            start_frame, text="Incepe acum", variable=self.start_option,
-            value="now", command=self._toggle_time_input, bootstyle="success"
+            start_frame, text=SCHEDULING_OPTIONS["now"], variable=self.start_option,
+            value="now", command=self._toggle_time_input, bootstyle="success"  # type: ignore
         ).pack(anchor=W, pady=5)
         
         scheduled_frame = tb.Frame(start_frame)
         scheduled_frame.pack(anchor=W, pady=5)
         
         tb.Radiobutton(
-            scheduled_frame, text="Incepe la ora:", variable=self.start_option,
-            value="scheduled", command=self._toggle_time_input, bootstyle="success"
+            scheduled_frame, text=SCHEDULING_OPTIONS["scheduled"], variable=self.start_option,
+            value="scheduled", command=self._toggle_time_input, bootstyle="success"  # type: ignore
         ).pack(side=LEFT)
         
         self.time_entry = tb.Entry(scheduled_frame, textvariable=self.start_time_var, width=8, state="disabled")
         self.time_entry.pack(side=LEFT, padx=5)
         
         tb.Label(scheduled_frame, text="(Format: HH:MM)").pack(side=LEFT)
+        
+        # Add daily scheduling option
+        daily_frame = tb.Frame(start_frame)
+        daily_frame.pack(anchor=W, pady=5)
+        
+        tb.Radiobutton(
+            daily_frame, text=SCHEDULING_OPTIONS["daily"], variable=self.start_option,
+            value="daily", command=self._toggle_time_input, bootstyle="success"  # type: ignore
+        ).pack(side=LEFT)
+        
+        self.daily_time_entry = tb.Entry(daily_frame, textvariable=self.start_time_var, width=8)
+        self.daily_time_entry.pack(side=LEFT, padx=5)
+        
+        tb.Label(daily_frame, text="(Format: HH:MM)").pack(side=LEFT)
+        
+        # Initialize time value from config
+        self.start_time_var.set(self.schedule_config.get("start_time", DEFAULT_START_TIME))
+        self.hours_var.set(self.schedule_config.get("hours", DEFAULT_HOURS))
+        self.screenshots_var.set(self.schedule_config.get("screenshots", DEFAULT_SCREENSHOTS))
+        self.start_option.set(self.schedule_config.get("start_option", DEFAULT_START_OPTION))
+        self.app_choice.set(self.schedule_config.get("app_choice", DEFAULT_APP_CHOICE))
         
         # Controls
         control_frame = tb.Frame(right_frame)
@@ -179,15 +280,21 @@ class ScreenshotApp:
         # Add buttons with better styling
         self.start_button = tb.Button(
             control_frame, text="Porneste Procesul",
-            command=self.start_process, bootstyle="success", width=20
+            command=self.start_process, bootstyle="success", width=20  # type: ignore
         )
         self.start_button.pack(pady=5)
         
         self.stop_button = tb.Button(
             control_frame, text="Opreste Procesul",
-            command=self.stop_process, bootstyle="danger", width=20, state="disabled"
+            command=self.stop_process, bootstyle="danger", width=20, state="disabled"  # type: ignore
         )
         self.stop_button.pack(pady=5)
+        
+        self.save_button = tb.Button(
+            control_frame, text="Salvează Configurația",
+            command=self._save_and_notify, bootstyle="info", width=20  # type: ignore
+        )
+        self.save_button.pack(pady=5)
         
         # Progress area with detailed status
         progress_frame = tb.LabelFrame(right_frame, text="Progres", padding=15)
@@ -201,23 +308,38 @@ class ScreenshotApp:
         self.countdown_var = StringVar(value="In asteptare")
         countdown_frame = tb.Frame(status_info_frame)
         countdown_frame.pack(fill=X, pady=2)
-        tb.Label(countdown_frame, text="Timp ramas:", bootstyle="info").pack(side=LEFT)
-        tb.Label(countdown_frame, textvariable=self.countdown_var, bootstyle="info", font=("Segoe UI", 10, "bold")).pack(side=LEFT, padx=5)
+        tb.Label(countdown_frame, text="Timp ramas:", bootstyle="info").pack(side=LEFT)  # type: ignore
+        tb.Label(countdown_frame, textvariable=self.countdown_var, bootstyle="info", font=("Segoe UI", 10, "bold")).pack(side=LEFT, padx=5)  # type: ignore
         
         # Screenshot counter
         self.counter_var = StringVar(value="0/0 capturi")
         counter_frame = tb.Frame(status_info_frame)
         counter_frame.pack(fill=X, pady=2)
-        tb.Label(counter_frame, text="Progres capturi:", bootstyle="info").pack(side=LEFT)
-        tb.Label(counter_frame, textvariable=self.counter_var, bootstyle="info", font=("Segoe UI", 10, "bold")).pack(side=LEFT, padx=5)
+        tb.Label(counter_frame, text="Progres capturi:", bootstyle="info").pack(side=LEFT)  # type: ignore
+        tb.Label(counter_frame, textvariable=self.counter_var, bootstyle="info", font=("Segoe UI", 10, "bold")).pack(side=LEFT, padx=5)  # type: ignore
+        
+        # Next run indicator for daily scheduling
+        self.next_run_var = StringVar(value="")
+        next_run_frame = tb.Frame(status_info_frame)
+        next_run_frame.pack(fill=X, pady=2)
+        self.next_run_label = tb.Label(next_run_frame, text="Următoarea rulare:", bootstyle="info")  # type: ignore
+        self.next_run_value = tb.Label(next_run_frame, textvariable=self.next_run_var, bootstyle="info", font=("Segoe UI", 10, "bold"))  # type: ignore
+        
+        # Show/hide next run indicator based on scheduling mode
+        if self.start_option.get() == "daily":
+            self.next_run_label.pack(side=LEFT)
+            self.next_run_value.pack(side=LEFT, padx=5)
         
         # Progress bar
         self.progress_bar = tb.Progressbar(
             progress_frame, orient="horizontal",
             mode="determinate", variable=self.progress_var,
-            bootstyle="success"
+            bootstyle="success"  # type: ignore
         )
         self.progress_bar.pack(fill=X, pady=5)
+        
+        # Apply the current scheduling mode
+        self._toggle_time_input()
 
     def _create_about_tab(self):
         """Create the about tab"""
@@ -255,7 +377,7 @@ class ScreenshotApp:
             self.notification_frame,
             text="⚠️",
             font=("Segoe UI", 12),
-            bootstyle="danger"
+            bootstyle="danger"  # type: ignore
         )
         self.error_label.pack(side=LEFT, padx=5)
         
@@ -263,7 +385,7 @@ class ScreenshotApp:
             self.notification_frame,
             textvariable=self.status_var,
             font=("Segoe UI", 10),
-            bootstyle="danger"
+            bootstyle="danger"  # type: ignore
         )
         self.notification_label.pack(side=LEFT, padx=5)
         
@@ -291,8 +413,8 @@ class ScreenshotApp:
             self.notification_visible = True
             
             # Initial style configuration
-            self.notification_label.configure(bootstyle="danger")
-            self.error_label.configure(bootstyle="danger")
+            self.notification_label.configure(style="danger.TLabel")  # Changed from bootstyle to style
+            self.error_label.configure(style="danger.TLabel")  # Changed from bootstyle to style
         
         # Flash the notification
         self._flash_notification()
@@ -313,12 +435,12 @@ class ScreenshotApp:
                 return
             
             # Get the current style configuration
-            current_style = self.notification_label.cget("bootstyle")
+            current_style = self.notification_label.cget("style").split(".")[0]  # Extract the style prefix
             new_style = "danger" if current_style == "warning" else "warning"
             
             # Update both the label and frame styles
-            self.notification_label.configure(bootstyle=new_style)
-            self.error_label.configure(bootstyle=new_style)
+            self.notification_label.configure(style=f"{new_style}.TLabel")  # Changed from bootstyle to style
+            self.error_label.configure(style=f"{new_style}.TLabel")  # Changed from bootstyle to style
             
             # Schedule next flash
             self.app.after(500, flash)
@@ -331,10 +453,35 @@ class ScreenshotApp:
         self.app.after(1000, self._update_time)
 
     def _toggle_time_input(self):
-        """Toggle time input field based on start option"""
-        self.time_entry.config(
-            state="normal" if self.start_option.get() == "scheduled" else "disabled"
-        )
+        """Toggle time input fields based on start option"""
+        option = self.start_option.get()
+        
+        # Handle time entry field states
+        if option == "scheduled":
+            self.time_entry.config(state="normal")
+            self.daily_time_entry.config(state="disabled")
+        elif option == "daily":
+            self.time_entry.config(state="disabled")
+            self.daily_time_entry.config(state="normal")
+            
+            # Calculate and show next run time
+            next_run = self._calculate_next_daily_run()
+            if next_run:
+                self.next_run_var.set(next_run.strftime("%d-%m-%Y %H:%M"))
+                
+            # Show next run indicator
+            self.next_run_label.pack(side=LEFT)
+            self.next_run_value.pack(side=LEFT, padx=5)
+        else:  # "now"
+            self.time_entry.config(state="disabled")
+            self.daily_time_entry.config(state="disabled")
+            
+            # Hide next run indicator
+            self.next_run_label.pack_forget()
+            self.next_run_value.pack_forget()
+            
+        # Save current configuration
+        self._save_schedule_config()
 
     def _validate_inputs(self) -> Tuple[int, int]:
         """Validate input values and return validated hours and screenshots"""
@@ -462,7 +609,7 @@ class ScreenshotApp:
             self.logger
         )
 
-        app_name = SUPPORTED_APPS.get(self.app_choice.get(), "Zoom")
+        app_name = SUPPORTED_APPS.get(self.app_choice.get(), "Desktop")
         current_date = initial_date
 
         try:
@@ -474,7 +621,7 @@ class ScreenshotApp:
                 # Check for stop at iteration start
                 if self.stop_requested:
                     self.logger.log("Proces oprit de utilizator")
-                    return
+                    break  # Changed from return to break to ensure date restoration
 
                 # System date management
                 if i > 0:
@@ -484,7 +631,7 @@ class ScreenshotApp:
                         raise RuntimeError("Nu s-a putut seta data sistemului")
                 else:
                     if not self._countdown(INITIAL_COUNTDOWN, "Prima captura in"):
-                        return
+                        break  # Changed from return to break to ensure date restoration
 
                 # Screenshot capture with retry logic
                 screenshot_success = False
@@ -496,7 +643,7 @@ class ScreenshotApp:
                         self.app.update()
                         time.sleep(RETRY_DELAY)
                         
-                    if self.system_utils.focus_window(app_name, self.logger):
+                    if self.app_choice.get() == "desktop" or self.system_utils.focus_window(app_name, self.logger):
                         screenshot_success = screenshot_mgr.capture(current_date)
                         
                     if not screenshot_success:
@@ -516,7 +663,7 @@ class ScreenshotApp:
                     )
                     if not user_response:
                         self.show_error("Proces oprit din cauza esecului capturii de ecran", "Eroare Fatala")
-                        raise RuntimeError("Proces oprit din cauza esecului capturii de ecran")
+                        break  # Changed from raise to break to ensure date restoration
                     self.logger.log("Utilizatorul a ales sa continue dupa esecul capturii")
                 else:
                     self._update_progress(i + 1, screenshots)
@@ -526,16 +673,26 @@ class ScreenshotApp:
                 # Wait for next screenshot
                 if i < screenshots - 1:
                     if not self._countdown(interval, "Urmatoarea captura in"):
-                        return
+                        break  # Changed from return to break to ensure date restoration
 
         except Exception as e:
+            self.logger.log(f"Eroare în procesul de captura: {e}")
             self.show_error(str(e), "Eroare in Proces")
-            raise
 
         finally:
-            # Restore initial date
+            # Restore initial date - always executed
+            self.logger.log("Se restaurează data inițială a sistemului")
             if not self._manage_system_date(initial_date, self.logger):
                 self.show_error("Nu s-a putut restaura data initiala a sistemului", "Avertisment")
+                
+            # Make a second restoration attempt if needed
+            current_system_date = datetime.now()
+            if abs((current_system_date - initial_date).days) > 0:
+                self.logger.log("Se face o încercare suplimentară de restaurare a datei")
+                time.sleep(1)  # Wait a moment before trying again
+                if not self._manage_system_date(initial_date, self.logger):
+                    self.show_error("Restaurarea datei a eșuat. Verificați data sistemului manual.", "Avertisment")
+                
             self._cleanup()
 
     def _cleanup(self):
@@ -602,6 +759,18 @@ class ScreenshotApp:
     def run(self):
         """Start the application main loop"""
         try:
+            # Start the daily schedule checker if needed
+            if self.start_option.get() == "daily":
+                # Calculate and display next run time
+                next_run = self._calculate_next_daily_run()
+                if next_run:
+                    self.next_run_var.set(next_run.strftime("%d-%m-%Y %H:%M"))
+                    self.status_var.set(f"Programat pentru {self.start_time_var.get()}")
+                
+            # Start the daily schedule checker
+            self._check_daily_schedule()
+            
+            # Start main application loop
             self.app.mainloop()
         except Exception as e:
             self.logger.log(f"Eroare aplicatie: {e}")
@@ -612,6 +781,79 @@ class ScreenshotApp:
                 datetime.now().strftime("%m/%d/%Y"),
                 self.logger
             )
+
+    def _calculate_next_daily_run(self) -> Optional[datetime]:
+        """
+        Calculate the next execution time for a daily scheduled task
+        
+        Returns:
+            Optional[datetime]: The next scheduled run time or None if invalid
+        """
+        try:
+            if not self.start_time_var.get() or not self._validate_time_format(self.start_time_var.get()):
+                return None
+                
+            target_time = datetime.strptime(self.start_time_var.get(), "%H:%M").time()
+            now = datetime.now()
+            
+            # Create a datetime for today with the target time
+            next_run = datetime.combine(now.date(), target_time)
+            
+            # If that time has already passed today, schedule for tomorrow
+            if next_run <= now:
+                next_run += timedelta(days=1)
+                
+            return next_run
+        except Exception as e:
+            self.logger.log(f"Eroare la calcularea următoarei rulări: {e}")
+            return None
+            
+    def _check_daily_schedule(self) -> None:
+        """
+        Check if it's time to run the daily scheduled task
+        This method is called periodically from the application main loop
+        """
+        if not self.is_running and self.start_option.get() == "daily":
+            now = datetime.now()
+            next_run = self._calculate_next_daily_run()
+            
+            if next_run is None:
+                return
+                
+            # Update the next run display
+            self.next_run_var.set(next_run.strftime("%d-%m-%Y %H:%M"))
+            
+            # Calculate time difference in seconds
+            time_diff = (next_run - now).total_seconds()
+            
+            # If it's time to run (within a 30-second window)
+            if 0 <= time_diff < 30:
+                # Check if we've already run today
+                last_run_str = self.schedule_config.get("last_run")
+                if last_run_str:
+                    try:
+                        last_run = datetime.strptime(last_run_str, "%Y-%m-%d %H:%M:%S")
+                        # If the last run was today and at approximately the same time, don't run again
+                        if (last_run.date() == now.date() and 
+                            abs((last_run.hour * 60 + last_run.minute) - 
+                                (now.hour * 60 + now.minute)) < 5):
+                            return
+                    except Exception:
+                        pass
+                
+                # It's time to run and we haven't run yet today
+                self.logger.log("Pornire automată programată zilnic")
+                self.status_var.set("Pornire automată programată")
+                
+                # Record the run time
+                self.schedule_config["last_run"] = now.strftime("%Y-%m-%d %H:%M:%S")
+                self._save_schedule_config()
+                
+                # Start the process
+                self.start_process()
+        
+        # Schedule the next check in 10 seconds
+        self.app.after(10000, self._check_daily_schedule)
 
 def main():
     """Main entry point for the application"""

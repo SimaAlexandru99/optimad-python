@@ -13,6 +13,20 @@ COUNTDOWN_CHECK_INTERVAL = 0.1  # interval verificare numaratoare inversa
 THREAD_CLEANUP_TIMEOUT = 0.5  # timp asteptare curatare thread
 RETRY_DELAY = 2  # secunde intre reincercari
 
+# Optiuni planificare
+SCHEDULING_OPTIONS = {
+    "now": "Incepe acum",
+    "scheduled": "Incepe la ora specificata",
+    "daily": "Ruleaza zilnic la ora specificata"
+}
+
+# Valori implicite
+DEFAULT_START_OPTION = "daily"
+DEFAULT_START_TIME = "18:10"
+DEFAULT_HOURS = "2"
+DEFAULT_SCREENSHOTS = "10"
+DEFAULT_APP_CHOICE = "desktop"
+
 # Limite validare
 MAX_HOURS = 24
 MAX_SCREENSHOTS = 60
@@ -23,6 +37,7 @@ MIN_DISK_SPACE = 500 * 1024 * 1024  # 500 MB minim necesar
 
 # Configurari aplicatii suportate
 SUPPORTED_APPS: Dict[str, str] = {
+    "desktop": "Desktop",
     "zoom": "Zoom",
     "teams": "Microsoft Teams",
     "chrome": "Google Chrome"
@@ -63,6 +78,7 @@ STYLES = {
 LOG_DIR = "logs"
 LOG_FILENAME = "jurnal_erori.txt"
 CONFIG_FILENAME = "themeconfig.json"
+SCHEDULE_CONFIG_FILENAME = "schedule_config.json"
 
 # Mesaje de eroare
 ERROR_MESSAGES = {

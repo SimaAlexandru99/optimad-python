@@ -16,4 +16,3 @@ ttkbootstrap==1.10.1
 ttkthemes==3.2.2
 pyautogui
 Pillow
-winsound

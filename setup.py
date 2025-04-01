@@ -2,7 +2,6 @@ import subprocess
 import sys
 import os
 from pathlib import Path
-import platform
 
 def setup_venv():
     """Set up the virtual environment and install dependencies"""
