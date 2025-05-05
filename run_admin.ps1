@@ -31,7 +31,7 @@ $setupScript = Join-Path -Path $currentDir -ChildPath "setup.py"
 if (-Not (Test-Path $venvPath)) {
     Write-Host "Se creeaza mediul virtual..." -ForegroundColor Cyan
     & python $setupScript
-    
+
     if (-Not (Test-Path $venvPath)) {
         Write-Host "Esec la crearea mediului virtual!" -ForegroundColor Red
         Read-Host -Prompt "Apasa Enter pentru a iesi"
