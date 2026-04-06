@@ -18,6 +18,7 @@ Optimad este o aplicație specializată pentru capturarea automată a ecranului,
 ### Scopul aplicației
 
 Aplicația a fost concepută pentru a ajuta utilizatorii să:
+
 - Documenteze automat activitatea de pe ecran
 - Simuleze activitate desfășurată în mai multe zile consecutive
 - Automatizeze procesul de capturare pentru diferite platforme
@@ -38,10 +39,13 @@ Aplicația a fost concepută pentru a ajuta utilizatorii să:
 1. Deschideți Command Prompt sau PowerShell
 2. Navigați la directorul aplicației
 3. Executați script-ul de configurare:
+
    ```
    python setup.py
    ```
+
 4. După finalizare, activați mediul virtual:
+
    ```
    .venv\Scripts\activate
    ```
@@ -49,14 +53,19 @@ Aplicația a fost concepută pentru a ajuta utilizatorii să:
 #### Metoda 2: Instalare manuală
 
 1. Creați un mediu virtual:
+
    ```
    python -m venv .venv
    ```
+
 2. Activați mediul virtual:
+
    ```
    .venv\Scripts\activate
    ```
+
 3. Instalați dependențele:
+
    ```
    pip install -r requirements.txt
    ```
@@ -69,6 +78,7 @@ Pentru funcționalitate completă, aplicația trebuie rulată cu drepturi de adm
 - `run_admin.ps1` (pentru PowerShell)
 
 Alternativ, puteți deschide Command Prompt cu drepturi de administrator și executa:
+
 ```
 python main.py
 ```
@@ -89,6 +99,7 @@ Acest tab conține majoritatea controalelor pentru configurarea și operarea apl
 #### Secțiunea "Selecteaza aplicația"
 
 Alegeți aplicația care va fi focalizată înainte de realizarea capturilor:
+
 - Desktop (implicit)
 - Zoom
 - Microsoft Teams
@@ -97,6 +108,7 @@ Alegeți aplicația care va fi focalizată înainte de realizarea capturilor:
 #### Secțiunea "Optiuni de pornire"
 
 Alege când să înceapă procesul de capturare:
+
 - **Incepe acum**: Pornire imediată
 - **Incepe la ora specificata**: Setează o oră precisă pentru pornire (format HH:MM)
 - **Ruleaza zilnic la ora specificata**: Programează rularea zilnică la ora stabilită
@@ -104,6 +116,7 @@ Alege când să înceapă procesul de capturare:
 #### Secțiunea "Progres"
 
 Afișează informații despre progresul capturilor:
+
 - Timp rămas până la următoarea captură
 - Numărul de capturi realizate
 - Data și ora următoarei rulări programate (pentru rulare zilnică)
@@ -129,6 +142,7 @@ Specificați câte capturi doriți să realizați în timpul simulării. Valoare
 ### Formatul și calitatea capturilor
 
 Implicit, capturile sunt salvate în format PNG pentru calitate optimă. Locația capturilor este organizată în directoare după data simulată:
+
 ```
 [Director aplicație]/[YYYY-MM-DD]/[HH-MM-SS].png
 ```
@@ -167,6 +181,7 @@ Pentru a păstra setările pentru utilizări viitoare, apăsați butonul "Salvea
 ### Monitorizarea progresului
 
 În timpul procesului de capturare, interfața afișează:
+
 - Timpul rămas până la următoarea captură
 - Numărul de capturi realizate și totalul planificat
 - O bară de progres pentru vizualizare rapidă
@@ -182,7 +197,8 @@ Procesul de capturare poate fi oprit în orice moment apăsând butonul "Opreșt
 #### Eroare: "Nu s-a putut seta data sistemului"
 
 **Cauză posibilă**: Aplicația nu are drepturi suficiente pentru a modifica data sistemului.
-**Soluție**: 
+**Soluție**:
+
 1. Asigurați-vă că rulați aplicația cu drepturi de administrator
 2. Verificați că nu există alte programe care blochează modificarea datei sistemului
 
@@ -190,6 +206,7 @@ Procesul de capturare poate fi oprit în orice moment apăsând butonul "Opreșt
 
 **Cauză posibilă**: Aplicația nu poate accesa ecranul sau nu are permisiuni suficiente.
 **Soluție**:
+
 1. Verificați că aplicația țintă (Zoom, Teams etc.) este deschisă și vizibilă
 2. Asigurați-vă că nu există ferestre de dialog sau notificări care blochează aplicația
 

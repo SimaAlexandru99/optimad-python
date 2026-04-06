@@ -8,3 +8,10 @@ __pycache__/
 logs/
 .env
 .venv
+.pytest_cache/
+tests/.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+themeconfig.json
+schedule_config.json
+[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]/

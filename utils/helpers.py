@@ -1,26 +1,34 @@
 import os
+import shutil
+import subprocess
+import sys
 import time
 import tkinter as tk
 from datetime import datetime, timedelta
 from pathlib import Path
-from tkinter import messagebox
-from typing import Optional, Union, NoReturn
+from typing import Optional, Union
+
 import pyautogui
+from PIL import Image
 from pywinauto import Desktop
 from pywinauto.findwindows import ElementNotFoundError
-import subprocess
-import shutil
-from PIL import Image
 
 from .constants import (
-    MIN_DISK_SPACE, ERROR_MESSAGES, SUPPORTED_IMAGE_FORMATS,
-    DEFAULT_IMAGE_FORMAT, DEFAULT_JPEG_QUALITY, LOG_DIR, LOG_FILENAME
+    MIN_DISK_SPACE,
+    ERROR_MESSAGES,
+    SUPPORTED_IMAGE_FORMATS,
+    DEFAULT_IMAGE_FORMAT,
+    DEFAULT_JPEG_QUALITY,
+    LOG_DIR,
+    LOG_FILENAME,
 )
+
 
 class Logger:
     """
     Handles application logging with support for both file and widget output.
     """
+
     def __init__(self, log_dir: str = LOG_DIR):
         """
         Initialize the logger with a specified log directory.
@@ -38,7 +46,9 @@ class Logger:
 
             # Validate write permissions
             if not os.access(self.log_dir, os.W_OK):
-                raise PermissionError(f"Nu exista permisiuni de scriere pentru {self.log_dir}")
+                raise PermissionError(
+                    f"Nu exista permisiuni de scriere pentru {self.log_dir}"
+                )
 
         except Exception as e:
             raise RuntimeError(f"Esec la initializarea jurnalului: {e}")
@@ -52,7 +62,7 @@ class Logger:
             log_widget: Optional tkinter Text widget for display
         """
         try:
-            timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             log_entry = f"{timestamp} - {message}\n"
 
             # Write to file
@@ -61,19 +71,23 @@ class Logger:
 
             # Update widget if provided
             if log_widget:
-                log_widget.config(state='normal')
+                log_widget.config(state="normal")
                 log_widget.insert(tk.END, log_entry)
                 log_widget.see(tk.END)
-                log_widget.config(state='disabled')
+                log_widget.config(state="disabled")
 
         except Exception as e:
-            # If logging fails, attempt to show error dialog
-            messagebox.showerror("Eroare de Jurnalizare", f"Eșec la jurnalizarea mesajului: {str(e)}")
+            print(
+                f"Esec la jurnalizarea mesajului: {str(e)}",
+                file=sys.stderr,
+            )
+
 
 class SystemUtils:
     """
     Utility class for system-level operations.
     """
+
     @staticmethod
     def set_system_date(new_date: str, logger: Logger) -> bool:
         """
@@ -90,50 +104,53 @@ class SystemUtils:
             # Validate date format
             parsed_date = datetime.strptime(new_date, "%m/%d/%Y")
 
-            # Set date based on operating system
-            if os.name == 'nt':  # Windows
-                # Try multiple approaches to set the date with admin rights
-                success = False
-                
-                # Method 1: Direct command
-                cmd1 = f'date {new_date}'
-                result1 = subprocess.run(cmd1, shell=True, capture_output=True)
-                if result1.returncode == 0:
-                    success = True
-                
-                # Method 2: Via cmd
-                if not success:
-                    cmd2 = f'cmd /c date {new_date}'
-                    result2 = subprocess.run(cmd2, shell=True, capture_output=True)
-                    if result2.returncode == 0:
-                        success = True
-                
-                # Method 3: PowerShell
-                if not success:
-                    ps_date = parsed_date.strftime("%Y-%m-%d")
-                    cmd3 = f'powershell -Command "Set-Date -Date \'{ps_date}\'"'
-                    result3 = subprocess.run(cmd3, shell=True, capture_output=True)
-                    if result3.returncode == 0:
-                        success = True
-                
-                # Method 4: Use WMIC (old but reliable)
-                if not success:
-                    wmic_date = parsed_date.strftime("%Y%m%d")
-                    wmic_time = datetime.now().strftime("%H:%M:%S")
-                    cmd4 = f'wmic path win32_localtime set Day={parsed_date.day},Month={parsed_date.month},Year={parsed_date.year}'
-                    result4 = subprocess.run(cmd4, shell=True, capture_output=True)
-                    if result4.returncode == 0:
-                        success = True
-                
-                if not success:
-                    raise OSError(f"Eșec la setarea datei sistemului folosind multiple metode")
-            else:  # Unix-like systems
-                result = os.system(f'sudo date -s "{new_date}"')
-                if result != 0:
-                    raise OSError(f"Eșec la setarea datei sistemului. Cod de ieșire: {result}")
+            if os.name != "nt":
+                logger.log("Setarea datei sistemului este suportata doar pe Windows")
+                return False
 
-            logger.log(f"Data sistemului setată cu succes la {new_date}")
-            return True
+            ps_date = parsed_date.strftime("%Y-%m-%d")
+            commands = [
+                (
+                    "PowerShell Set-Date",
+                    [
+                        "powershell",
+                        "-NoProfile",
+                        "-Command",
+                        f"Set-Date -Date '{ps_date}'",
+                    ],
+                ),
+                ("cmd /c date", ["cmd", "/c", "date", new_date]),
+                (
+                    "WMIC LocalTime",
+                    [
+                        "wmic",
+                        "path",
+                        "win32_localtime",
+                        "set",
+                        f"Day={parsed_date.day},Month={parsed_date.month},Year={parsed_date.year}",
+                    ],
+                ),
+            ]
+
+            for label, command in commands:
+                result = subprocess.run(
+                    command,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                stdout = result.stdout.strip()
+                stderr = result.stderr.strip()
+                if result.returncode == 0:
+                    logger.log(f"Data sistemului setata cu succes la {new_date} prin {label}")
+                    return True
+
+                logger.log(
+                    f"{label} a esuat cu codul {result.returncode}. "
+                    f"stdout='{stdout}' stderr='{stderr}'"
+                )
+
+            raise OSError("Esec la setarea datei sistemului folosind multiple metode")
 
         except ValueError as e:
             logger.log(f"Format de dată invalid: {e}")
@@ -168,23 +185,30 @@ class SystemUtils:
                         return True
 
                 if attempt < retry_attempts - 1:
-                    logger.log(f"Încercare {attempt + 1}: {app_name} negăsit, se reîncearcă...")
+                    logger.log(
+                        f"Încercare {attempt + 1}: {app_name} negăsit, se reîncearcă..."
+                    )
                     time.sleep(1)  # Wait before retry
                 else:
-                    logger.log(f"Eșec în găsirea {app_name} după {retry_attempts} încercări")
+                    logger.log(
+                        f"Eșec în găsirea {app_name} după {retry_attempts} încercări"
+                    )
 
             except ElementNotFoundError as e:
                 if attempt < retry_attempts - 1:
                     logger.log(f"Încercarea {attempt + 1} a eșuat: {e}")
                     time.sleep(1)
                 else:
-                    logger.log(f"Eșec la focalizarea ferestrei după {retry_attempts} încercări: {e}")
+                    logger.log(
+                        f"Eșec la focalizarea ferestrei după {retry_attempts} încercări: {e}"
+                    )
 
         return False
 
+
 class ScreenshotManager:
     """Manages screenshot capture and storage operations."""
-    
+
     def __init__(self, root_dir: Union[str, Path], logger: Logger):
         """Initialize the screenshot manager."""
         try:
@@ -193,13 +217,17 @@ class ScreenshotManager:
 
             self.root_dir.mkdir(parents=True, exist_ok=True)
             if not os.access(self.root_dir, os.W_OK):
-                raise PermissionError(f"Nu exista permisiuni de scriere pentru {self.root_dir}")
+                raise PermissionError(
+                    f"Nu exista permisiuni de scriere pentru {self.root_dir}"
+                )
 
             if not self._check_disk_space():
-                raise RuntimeError(ERROR_MESSAGES['disk_space'])
+                raise RuntimeError(ERROR_MESSAGES["disk_space"])
 
         except Exception as e:
-            raise RuntimeError(f"Esec la initializarea directorului de capturi de ecran: {e}")
+            raise RuntimeError(
+                f"Esec la initializarea directorului de capturi de ecran: {e}"
+            )
 
     def _get_date_dir(self, date: datetime) -> Path:
         """Get or create date-specific directory for screenshots."""
@@ -221,19 +249,21 @@ class ScreenshotManager:
         try:
             if not filepath.exists():
                 return False
-            
+
             if filepath.stat().st_size == 0:
                 return False
-                
+
             Image.open(filepath).verify()
             return True
         except Exception:
             return False
 
-    def capture(self,
-                screenshot_date: datetime,
-                format_imagine: str = DEFAULT_IMAGE_FORMAT,
-                quality: int = DEFAULT_JPEG_QUALITY) -> bool:
+    def capture(
+        self,
+        screenshot_date: datetime,
+        format_imagine: str = DEFAULT_IMAGE_FORMAT,
+        quality: int = DEFAULT_JPEG_QUALITY,
+    ) -> bool:
         """Capture and save a screenshot."""
         if format_imagine.lower() not in SUPPORTED_IMAGE_FORMATS:
             self.logger.log(f"Format de imagine neacceptat: {format_imagine}")
@@ -241,7 +271,7 @@ class ScreenshotManager:
 
         try:
             if not self._check_disk_space():
-                raise RuntimeError(ERROR_MESSAGES['disk_space'])
+                raise RuntimeError(ERROR_MESSAGES["disk_space"])
 
             if not isinstance(screenshot_date, datetime):
                 raise ValueError("Data de captura de ecran invalida furnizata")
@@ -253,31 +283,32 @@ class ScreenshotManager:
             filepath = save_dir / filename
 
             if filepath.exists():
-                self.logger.log(f"Avertisment: Se suprascrie fisierul existent {filepath}")
+                self.logger.log(
+                    f"Avertisment: Se suprascrie fisierul existent {filepath}"
+                )
 
-            if format_imagine.lower() in {'jpg', 'jpeg'}:
+            if format_imagine.lower() in {"jpg", "jpeg"}:
                 screenshot = screenshot.convert("RGB")
                 screenshot.save(filepath, quality=quality)
             else:
                 screenshot.save(filepath)
 
             if not self._verify_saved_file(filepath):
-                raise RuntimeError(ERROR_MESSAGES['file_verification'])
+                raise RuntimeError(ERROR_MESSAGES["file_verification"])
 
             self.logger.log(f"Captura de ecran salvata cu succes la {filepath}")
-            
+
             try:
                 import winsound
+
                 winsound.MessageBeep(winsound.MB_OK)
-            except:
+            except Exception:
                 pass
-                
+
             return True
 
         except Exception as e:
             self.logger.log(f"Esec la captura de ecran: {str(e)}")
-            messagebox.showerror("Eroare Captura Ecran",
-                               f"Esec la capturarea ecranului: {str(e)}")
             return False
 
     def cleanup_old_screenshots(self, days: int = 30) -> None:
@@ -289,18 +320,22 @@ class ScreenshotManager:
         """
         try:
             cutoff_date = datetime.now() - timedelta(days=days)
-            
+
             # Iterate through date directories
             for date_dir in self.root_dir.glob("????-??-??"):
                 try:
                     dir_date = datetime.strptime(date_dir.name, "%Y-%m-%d")
                     if dir_date < cutoff_date:
                         shutil.rmtree(date_dir)
-                        self.logger.log(f"Sters director vechi de capturi: {date_dir.name}")
+                        self.logger.log(
+                            f"Sters director vechi de capturi: {date_dir.name}"
+                        )
                 except ValueError:
                     self.logger.log(f"Director invalid ignorat: {date_dir.name}")
                 except Exception as e:
-                    self.logger.log(f"Eroare la stergerea directorului {date_dir.name}: {e}")
+                    self.logger.log(
+                        f"Eroare la stergerea directorului {date_dir.name}: {e}"
+                    )
 
         except Exception as e:
             self.logger.log(f"Eroare in timpul curatarii: {e}")

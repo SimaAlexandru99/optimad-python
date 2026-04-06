@@ -17,7 +17,7 @@ RETRY_DELAY = 2  # secunde intre reincercari
 SCHEDULING_OPTIONS = {
     "now": "Incepe acum",
     "scheduled": "Incepe la ora specificata",
-    "daily": "Ruleaza zilnic la ora specificata"
+    "daily": "Ruleaza zilnic la ora specificata",
 }
 
 # Valori implicite
@@ -40,11 +40,11 @@ SUPPORTED_APPS: Dict[str, str] = {
     "desktop": "Desktop",
     "zoom": "Zoom",
     "teams": "Microsoft Teams",
-    "chrome": "Google Chrome"
+    "chrome": "Google Chrome",
 }
 
 # Configurari captura ecran
-SUPPORTED_IMAGE_FORMATS = {'png', 'jpg', 'jpeg'}
+SUPPORTED_IMAGE_FORMATS = {"png", "jpg", "jpeg"}
 DEFAULT_IMAGE_FORMAT = "png"
 DEFAULT_JPEG_QUALITY = 95
 MAX_CAPTURE_RETRIES = 3
@@ -52,26 +52,41 @@ MAX_CAPTURE_RETRIES = 3
 # Configurari teme UI
 DEFAULT_THEME = "darkly"
 VALID_THEMES: List[str] = [
-    "cosmo", "flatly", "journal", "litera", "lumen", "minty",
-    "pulse", "sandstone", "united", "yeti", "morph", "simplex",
-    "cerculean", "solar", "superhero", "darkly", "cyborg", "vapor"
+    "cosmo",
+    "flatly",
+    "journal",
+    "litera",
+    "lumen",
+    "minty",
+    "pulse",
+    "sandstone",
+    "united",
+    "yeti",
+    "morph",
+    "simplex",
+    "cerculean",
+    "solar",
+    "superhero",
+    "darkly",
+    "cyborg",
+    "vapor",
 ]
 
 # Configurari fonturi
 FONTS = {
-    'header': ('Segoe UI', 20, 'bold'),
-    'subheader': ('Segoe UI', 12, 'bold'),
-    'normal': ('Segoe UI', 10),
-    'small': ('Segoe UI', 9),
+    "header": ("Segoe UI", 20, "bold"),
+    "subheader": ("Segoe UI", 12, "bold"),
+    "normal": ("Segoe UI", 10),
+    "small": ("Segoe UI", 9),
 }
 
 # Configurari culori si stiluri
 STYLES = {
-    'success': 'success',
-    'danger': 'danger',
-    'warning': 'warning',
-    'info': 'info',
-    'primary': 'primary',
+    "success": "success",
+    "danger": "danger",
+    "warning": "warning",
+    "info": "info",
+    "primary": "primary",
 }
 
 # Configurari fisiere si directoare
@@ -82,14 +97,14 @@ SCHEDULE_CONFIG_FILENAME = "schedule_config.json"
 
 # Mesaje de eroare
 ERROR_MESSAGES = {
-    'admin_required': "Aplicatia necesita drepturi de administrator pentru a functiona corect.",
-    'disk_space': "Spatiu insuficient pe disc pentru capturi de ecran",
-    'invalid_time': "Format de timp invalid. Folositi HH:MM",
-    'invalid_hours': "Orele trebuie sa fie intre 1 si {max_hours}",
-    'invalid_screenshots': "Capturile de ecran trebuie sa fie intre 1 si {max_screenshots}",
-    'invalid_interval': "Intervalul minim intre capturi de ecran este {min_interval} minut(e)",
-    'system_date_error': "Nu s-a putut seta data sistemului",
-    'capture_failed': "Nu s-a putut realiza captura de ecran dupa mai multe incercari",
-    'file_verification': "Verificarea fisierului salvat a esuat",
-    'process_stopped': "Proces oprit din cauza esecului capturii de ecran",
+    "admin_required": "Aplicatia necesita drepturi de administrator pentru a functiona corect.",
+    "disk_space": "Spatiu insuficient pe disc pentru capturi de ecran",
+    "invalid_time": "Format de timp invalid. Folositi HH:MM",
+    "invalid_hours": "Orele trebuie sa fie intre 1 si {max_hours}",
+    "invalid_screenshots": "Capturile de ecran trebuie sa fie intre 1 si {max_screenshots}",
+    "invalid_interval": "Intervalul minim intre capturi de ecran este {min_interval} minut(e)",
+    "system_date_error": "Nu s-a putut seta data sistemului",
+    "capture_failed": "Nu s-a putut realiza captura de ecran dupa mai multe incercari",
+    "file_verification": "Verificarea fisierului salvat a esuat",
+    "process_stopped": "Proces oprit din cauza esecului capturii de ecran",
 }
