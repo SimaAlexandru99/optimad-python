@@ -29,14 +29,8 @@ class FakeLogger:
 
 
 class FakeSystemUtils:
-    def __init__(self, fail_dates=None):
-        self.fail_dates = set(fail_dates or [])
-        self.set_calls = []
+    def __init__(self):
         self.focus_calls = []
-
-    def set_system_date(self, new_date, logger):
-        self.set_calls.append(new_date)
-        return new_date not in self.fail_dates
 
     def focus_window(self, app_name, logger, retry_attempts=3):
         self.focus_calls.append((app_name, retry_attempts))
@@ -70,6 +64,7 @@ def run_controller(
     app_choice="desktop",
     hours=1,
     screenshots=1,
+    scheduled_datetime=None,
     prompt_response=None,
     stop_event=None,
 ):
@@ -81,6 +76,8 @@ def run_controller(
         events.append(event)
         if event["type"] == "prompt_capture_failure" and prompt_response is not None:
             controller_holder["controller"].respond_capture_failure(prompt_response)
+        if event["type"] == "prepare_overlay":
+            controller_holder["controller"].respond_overlay_ready(True)
 
     controller = ScreenshotProcessController(
         logger=logger,
@@ -95,11 +92,18 @@ def run_controller(
         retry_delay=1,
     )
     controller_holder["controller"] = controller
-    controller.run(hours, screenshots, start_option, start_time, app_choice)
+    controller.run(
+        hours,
+        screenshots,
+        start_option,
+        start_time,
+        app_choice,
+        scheduled_datetime,
+    )
     return controller, logger, events
 
 
-def test_controller_runs_successfully_and_restores_original_date():
+def test_controller_runs_successfully_with_overlay_dates():
     clock = FakeClock(datetime(2026, 4, 6, 10, 0, 0))
     system_utils = FakeSystemUtils()
     screenshot_manager = FakeScreenshotManager([True, True])
@@ -112,17 +116,20 @@ def test_controller_runs_successfully_and_restores_original_date():
         screenshots=2,
     )
 
-    assert controller.original_system_datetime == datetime(2026, 4, 6, 10, 0, 0)
-    assert system_utils.set_calls == ["04/07/2026", "04/06/2026"]
-    assert screenshot_manager.root_dir == "2026-04-06"
+    assert controller.initial_capture_datetime == datetime(2026, 4, 6, 10, 0, 0)
+    assert screenshot_manager.root_dir == "."
     assert screenshot_manager.captures[0] == datetime(2026, 4, 6, 10, 0, 0)
     assert screenshot_manager.captures[1] == datetime(2026, 4, 7, 10, 0, 0)
     assert events[-1] == {"type": "finished", "status": "Proces finalizat"}
+    assert [event["simulated_date"] for event in events if event["type"] == "prepare_overlay"] == [
+        "06-04-2026",
+        "07-04-2026",
+    ]
     assert any(event["type"] == "progress" and event["current"] == 2 for event in events)
     assert "Captura 2/2 realizata cu succes" in logger.messages
 
 
-def test_controller_stops_during_initial_countdown_and_restores():
+def test_controller_stops_during_initial_countdown():
     clock = FakeClock(datetime(2026, 4, 6, 10, 0, 0))
     system_utils = FakeSystemUtils()
     screenshot_manager = FakeScreenshotManager([True])
@@ -149,7 +156,6 @@ def test_controller_stops_during_initial_countdown_and_restores():
     controller.run(1, 1, "now", "18:10", "desktop")
 
     assert screenshot_manager.captures == []
-    assert system_utils.set_calls == ["04/06/2026"]
     assert events[-1] == {"type": "finished", "status": "Oprit"}
 
 
@@ -191,9 +197,9 @@ def test_controller_aborts_after_retry_prompt_when_user_declines():
     assert events[-1] == {"type": "finished", "status": "Oprit"}
 
 
-def test_controller_reports_date_restore_failure_after_second_attempt():
+def test_controller_hides_overlay_when_process_finishes():
     clock = FakeClock(datetime(2026, 4, 6, 10, 0, 0))
-    system_utils = FakeSystemUtils({"04/06/2026"})
+    system_utils = FakeSystemUtils()
     screenshot_manager = FakeScreenshotManager([True])
 
     _, _, events = run_controller(
@@ -202,12 +208,7 @@ def test_controller_reports_date_restore_failure_after_second_attempt():
         screenshot_manager=screenshot_manager,
     )
 
-    assert system_utils.set_calls == ["04/06/2026", "04/06/2026"]
-    assert any(
-        event["type"] == "error"
-        and event["message"] == "Restaurarea datei a esuat. Verificati data sistemului manual."
-        for event in events
-    )
+    assert any(event["type"] == "hide_overlay" for event in events)
 
 
 def test_controller_waits_for_scheduled_start():
@@ -226,5 +227,26 @@ def test_controller_waits_for_scheduled_start():
     assert any(
         event["type"] == "status"
         and event["message"].startswith("Asteptare pana la 10:00")
+        for event in events
+    )
+
+
+def test_controller_waits_for_absolute_scheduled_datetime():
+    clock = FakeClock(datetime(2026, 4, 6, 9, 59, 58))
+    system_utils = FakeSystemUtils()
+    screenshot_manager = FakeScreenshotManager([True])
+
+    _, _, events = run_controller(
+        clock=clock,
+        system_utils=system_utils,
+        screenshot_manager=screenshot_manager,
+        start_option="scheduled",
+        start_time="10:00",
+        scheduled_datetime=datetime(2026, 4, 7, 10, 0, 0),
+    )
+
+    assert any(
+        event["type"] == "status"
+        and event["message"].startswith("Asteptare pana la 07-04-2026 10:00")
         for event in events
     )

@@ -38,32 +38,36 @@ class ScreenshotProcessController:
         self.sleep_fn = sleep_fn
         self.countdown_interval = countdown_interval
         self.retry_delay = retry_delay
-        self.original_system_datetime: Optional[datetime] = None
+        self.initial_capture_datetime: Optional[datetime] = None
         self._prompt_responses: "queue.Queue[bool]" = queue.Queue()
+        self._overlay_responses: "queue.Queue[bool]" = queue.Queue()
 
     def run(
         self,
-        hours: int,
+        hours: float,
         screenshots: int,
         start_option: str,
         start_time: str,
         app_choice: str,
+        scheduled_datetime: Optional[datetime] = None,
     ) -> None:
         final_status = "Proces finalizat"
-        self.original_system_datetime = self.now_provider()
+        self.initial_capture_datetime = self.now_provider()
 
         try:
-            if start_option == "scheduled" and not self._wait_until_start_time(start_time):
+            if start_option == "scheduled" and not self._wait_for_scheduled_start(
+                start_time, scheduled_datetime
+            ):
                 final_status = "Oprit"
                 return
 
             screenshot_mgr = self.screenshot_manager_cls(
-                self.original_system_datetime.strftime("%Y-%m-%d"),
+                ".",
                 self.logger,
             )
             app_name = SUPPORTED_APPS.get(app_choice, "Desktop")
-            current_date = self.original_system_datetime
-            interval = max(1, (hours * 3600) // screenshots)
+            current_date = scheduled_datetime or self.initial_capture_datetime
+            interval = max(1, int((hours * 3600) / screenshots))
 
             self._emit("progress", current=0, total=screenshots)
             self._emit("clear_error")
@@ -76,10 +80,6 @@ class ScreenshotProcessController:
 
                 if index > 0:
                     current_date += timedelta(days=1)
-                    if not self.system_utils.set_system_date(
-                        current_date.strftime("%m/%d/%Y"), self.logger
-                    ):
-                        raise RuntimeError(ERROR_MESSAGES["system_date_error"])
                 else:
                     if not self._countdown(INITIAL_COUNTDOWN, "Prima captura in"):
                         final_status = "Oprit"
@@ -105,6 +105,9 @@ class ScreenshotProcessController:
                     if app_choice == "desktop" or self.system_utils.focus_window(
                         app_name, self.logger
                     ):
+                        if not self._prepare_overlay(current_date):
+                            final_status = "Oprit"
+                            break
                         screenshot_success = screenshot_mgr.capture(current_date)
 
                     if not screenshot_success:
@@ -158,23 +161,45 @@ class ScreenshotProcessController:
                 dialog=True,
             )
         finally:
-            restoration_error = self._restore_original_date()
-            if restoration_error:
-                self._emit(
-                    "error",
-                    message=restoration_error,
-                    title="Avertisment",
-                    dialog=True,
-                )
+            self._emit("hide_overlay")
             self._emit("finished", status=final_status)
 
     def respond_capture_failure(self, should_continue: bool) -> None:
         self._prompt_responses.put(should_continue)
 
+    def respond_overlay_ready(self, is_ready: bool) -> None:
+        self._overlay_responses.put(is_ready)
+
     def _emit(self, event_type: str, **payload: Any) -> None:
         event = {"type": event_type}
         event.update(payload)
         self.event_sink(event)
+
+    def _wait_for_scheduled_start(
+        self, start_time: str, scheduled_datetime: Optional[datetime]
+    ) -> bool:
+        if scheduled_datetime is not None:
+            return self._wait_until_datetime(scheduled_datetime)
+        return self._wait_until_start_time(start_time)
+
+    def _wait_until_datetime(self, target_datetime: datetime) -> bool:
+        while not self.stop_event.is_set():
+            now = self.now_provider()
+            if now >= target_datetime:
+                return True
+
+            remaining = target_datetime - now
+            total_seconds = max(0, int(remaining.total_seconds()))
+            minutes, seconds = divmod(total_seconds, 60)
+            self._emit(
+                "status",
+                message=(
+                    f"Asteptare pana la {target_datetime.strftime('%d-%m-%Y %H:%M')} "
+                    f"({minutes:02d}:{seconds:02d})"
+                ),
+            )
+            self._sleep_with_stop(min(1, max(self.countdown_interval, 0.01)))
+        return False
 
     def _wait_until_start_time(self, start_time: str) -> bool:
         target_time = datetime.strptime(start_time, "%H:%M").time()
@@ -236,20 +261,16 @@ class ScreenshotProcessController:
 
         return False
 
-    def _restore_original_date(self) -> Optional[str]:
-        if self.original_system_datetime is None:
-            return None
+    def _prepare_overlay(self, screenshot_date: datetime) -> bool:
+        self._emit(
+            "prepare_overlay",
+            simulated_date=screenshot_date.strftime("%d-%m-%Y"),
+        )
 
-        target_date = self.original_system_datetime.strftime("%m/%d/%Y")
-        self.logger.log("Se restaureaza data initiala a sistemului")
-        if self.system_utils.set_system_date(target_date, self.logger):
-            if self.now_provider().date() == self.original_system_datetime.date():
-                return None
+        while not self.stop_event.is_set():
+            try:
+                return self._overlay_responses.get_nowait()
+            except queue.Empty:
+                self.sleep_fn(max(0.01, self.countdown_interval))
 
-        self.logger.log("Se face o incercare suplimentara de restaurare a datei")
-        self.sleep_fn(1)
-        if self.system_utils.set_system_date(target_date, self.logger):
-            if self.now_provider().date() == self.original_system_datetime.date():
-                return None
-
-        return "Restaurarea datei a esuat. Verificati data sistemului manual."
+        return False

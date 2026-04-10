@@ -12,6 +12,9 @@ INITIAL_COUNTDOWN = 15  # secunde pana la prima captura
 COUNTDOWN_CHECK_INTERVAL = 0.1  # interval verificare numaratoare inversa
 THREAD_CLEANUP_TIMEOUT = 0.5  # timp asteptare curatare thread
 RETRY_DELAY = 2  # secunde intre reincercari
+COURSE_AUTO_CHECK_INTERVAL_MS = 10000  # polling pentru sesiuni importate
+COURSE_AUTO_LAUNCH_WINDOW_SECONDS = 60  # fereastra de lansare automata
+AUTO_COURSE_HISTORY_LIMIT = 200  # maxim sesiuni retinute ca procesate
 
 # Optiuni planificare
 SCHEDULING_OPTIONS = {
@@ -103,7 +106,6 @@ ERROR_MESSAGES = {
     "invalid_hours": "Orele trebuie sa fie intre 1 si {max_hours}",
     "invalid_screenshots": "Capturile de ecran trebuie sa fie intre 1 si {max_screenshots}",
     "invalid_interval": "Intervalul minim intre capturi de ecran este {min_interval} minut(e)",
-    "system_date_error": "Nu s-a putut seta data sistemului",
     "capture_failed": "Nu s-a putut realiza captura de ecran dupa mai multe incercari",
     "file_verification": "Verificarea fisierului salvat a esuat",
     "process_stopped": "Proces oprit din cauza esecului capturii de ecran",

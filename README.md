@@ -41,6 +41,14 @@ run_admin.bat
 - Aplicatia poate porni imediat, la o ora fixa sau zilnic la o ora fixa
 - Focalizarea automata este disponibila pentru `desktop`, `zoom`, `teams` si `chrome`
 - Data initiala a sistemului este capturata la pornirea procesului si restaurata explicit la final, inclusiv pe oprire sau eroare
+- Tabul `Cursuri` permite import Excel intr-o baza SQLite locala (`optimad.db`) si listarea sesiunilor importate
+
+## Import cursuri
+
+- Format Excel compatibil cu `optimad-desktop`
+- Sheet obligatoriu: `Grafic cursuri`
+- Sheet optional pentru linkuri: `Link-uri zoom`
+- Fiecare import nou inlocuieste sesiunile existente din baza locala
 
 ## Teste
 

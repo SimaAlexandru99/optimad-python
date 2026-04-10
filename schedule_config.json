@@ -1,9 +1,17 @@
 {
-  "start_option": "now",
-  "start_time": "18:10",
+  "start_option": "scheduled",
+  "start_time": "18:00",
   "hours": "2",
   "screenshots": "20",
-  "app_choice": "desktop",
+  "app_choice": "zoom",
   "last_run": "2025-04-09 18:09:38",
-  "is_scheduled_daily": false
+  "is_scheduled_daily": false,
+  "auto_course_enabled": true,
+  "tracked_course_session_id": "539eb69c-b4da-4cc9-b11a-b855374cd85f",
+  "last_auto_course_run_id": null,
+  "last_auto_course_run_at": "2026-04-08 10:47:24",
+  "last_auto_course_run_ids": [
+    "539eb69c-b4da-4cc9-b11a-b855374cd85f"
+  ],
+  "last_completed_batch_key": null
 }

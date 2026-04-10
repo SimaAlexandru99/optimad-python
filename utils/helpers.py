@@ -1,6 +1,5 @@
 import os
 import shutil
-import subprocess
 import sys
 import time
 import tkinter as tk
@@ -89,78 +88,16 @@ class SystemUtils:
     """
 
     @staticmethod
-    def set_system_date(new_date: str, logger: Logger) -> bool:
-        """
-        Set the system date with platform-specific implementation.
-
-        Args:
-            new_date: Date string in format MM/DD/YYYY
-            logger: Logger instance
-
-        Returns:
-            bool: Success status
-        """
+    def _try_zoom_fullscreen(window, logger: Logger) -> None:
+        """Attempt Zoom-specific fullscreen by double-clicking the top chrome."""
         try:
-            # Validate date format
-            parsed_date = datetime.strptime(new_date, "%m/%d/%Y")
-
-            if os.name != "nt":
-                logger.log("Setarea datei sistemului este suportata doar pe Windows")
-                return False
-
-            ps_date = parsed_date.strftime("%Y-%m-%d")
-            commands = [
-                (
-                    "PowerShell Set-Date",
-                    [
-                        "powershell",
-                        "-NoProfile",
-                        "-Command",
-                        f"Set-Date -Date '{ps_date}'",
-                    ],
-                ),
-                ("cmd /c date", ["cmd", "/c", "date", new_date]),
-                (
-                    "WMIC LocalTime",
-                    [
-                        "wmic",
-                        "path",
-                        "win32_localtime",
-                        "set",
-                        f"Day={parsed_date.day},Month={parsed_date.month},Year={parsed_date.year}",
-                    ],
-                ),
-            ]
-
-            for label, command in commands:
-                result = subprocess.run(
-                    command,
-                    capture_output=True,
-                    text=True,
-                    check=False,
-                )
-                stdout = result.stdout.strip()
-                stderr = result.stderr.strip()
-                if result.returncode == 0:
-                    logger.log(f"Data sistemului setata cu succes la {new_date} prin {label}")
-                    return True
-
-                logger.log(
-                    f"{label} a esuat cu codul {result.returncode}. "
-                    f"stdout='{stdout}' stderr='{stderr}'"
-                )
-
-            raise OSError("Esec la setarea datei sistemului folosind multiple metode")
-
-        except ValueError as e:
-            logger.log(f"Format de dată invalid: {e}")
-            return False
-        except OSError as e:
-            logger.log(f"Eroare de sistem la setarea datei: {e}")
-            return False
-        except Exception as e:
-            logger.log(f"Eroare neașteptată la setarea datei: {e}")
-            return False
+            rect = window.rectangle()
+            relative_x = max(40, min(rect.width() // 2, rect.width() - 40))
+            relative_y = max(8, min(18, rect.height() - 8))
+            window.click_input(coords=(relative_x, relative_y), double=True)
+            logger.log("Am incercat activarea fullscreen pentru Zoom prin dublu click.")
+        except Exception as exc:
+            logger.log(f"Fullscreen-ul Zoom nu a putut fi activat automat: {exc}")
 
     @staticmethod
     def focus_window(app_name: str, logger: Logger, retry_attempts: int = 3) -> bool:
@@ -181,6 +118,14 @@ class SystemUtils:
                 for window in windows:
                     if app_name.lower() in window.window_text().lower():
                         window.set_focus()
+                        try:
+                            window.maximize()
+                        except Exception as exc:
+                            logger.log(
+                                f"Fereastra {app_name} a fost focalizata, dar maximizarea a esuat: {exc}"
+                            )
+                        if app_name.lower() == "zoom":
+                            SystemUtils._try_zoom_fullscreen(window, logger)
                         logger.log(f"Focalizat cu succes fereastra {app_name}")
                         return True
 
@@ -201,6 +146,38 @@ class SystemUtils:
                 else:
                     logger.log(
                         f"Eșec la focalizarea ferestrei după {retry_attempts} încercări: {e}"
+                    )
+
+        return False
+
+    @staticmethod
+    def close_window(app_name: str, logger: Logger, retry_attempts: int = 3) -> bool:
+        """Close the first matching window for the provided app name."""
+        for attempt in range(retry_attempts):
+            try:
+                windows = Desktop(backend="uia").windows()
+                for window in windows:
+                    if app_name.lower() in window.window_text().lower():
+                        window.close()
+                        logger.log(f"Fereastra {app_name} a fost inchisa cu succes")
+                        return True
+
+                if attempt < retry_attempts - 1:
+                    logger.log(
+                        f"Incercare {attempt + 1}: {app_name} negasit pentru inchidere, se reincerca..."
+                    )
+                    time.sleep(1)
+                else:
+                    logger.log(
+                        f"Esec in inchiderea {app_name} dupa {retry_attempts} incercari"
+                    )
+            except Exception as exc:
+                if attempt < retry_attempts - 1:
+                    logger.log(f"Inchiderea {app_name} a esuat la incercarea {attempt + 1}: {exc}")
+                    time.sleep(1)
+                else:
+                    logger.log(
+                        f"Esec la inchiderea ferestrei {app_name} dupa {retry_attempts} incercari: {exc}"
                     )
 
         return False
