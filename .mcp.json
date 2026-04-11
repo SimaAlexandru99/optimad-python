@@ -1,0 +1,12 @@
+{
+    "mcpServers": {
+        "filesystem": {
+            "command": "cmd",
+            "args": ["/c", "bunx", "-y", "@modelcontextprotocol/server-filesystem", "E:/optimad-python"]
+        },
+        "mem0": {
+            "command": "cmd",
+            "args": ["/c", "bunx", "-y", "@mem0/mcp-server"]
+        }
+    }
+}
