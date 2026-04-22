@@ -1,9 +1,8 @@
-# System Instructions Pointer
+# Optimad Python — Gemini Instructions
 
-**CRITICAL INSTRUCTION:**
-Before assisting the user, you MUST read the instruction files located in the .github/instructions/ directory.
+See [CLAUDE.md](CLAUDE.md) for canonical agent instructions.
 
-Please read:
-- .github/instructions/01-architecture-and-stack.md
-- .github/instructions/02-ui-and-styling.md
-- .github/instructions/03-testing-and-linting.md
+## Token Efficiency
+- Batch tasks into single prompts.
+- Start fresh chats every 15-20 messages.
+- Use Haiku for simple tasks, Sonnet for real work, Opus for deep thinking.

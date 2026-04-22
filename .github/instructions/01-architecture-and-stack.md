@@ -1,18 +1,9 @@
-# Domain Knowledge & Stack
-- **Domain:** Windows Desktop Automation app (screenshots & system date modification).
-- **CRITICAL:** Requires **administrator privileges** to modify the system date (un_admin.bat).
-- **Framework:** Python + 	kinter/	tkbootstrap for GUI.
-- **Automation:** PyAutoGUI, pywinauto for system interaction. openpyxl for Excel.
+# Optimad Python — Architecture & Stack
 
-## Commands & Venv
-- **Setup:** python setup.py (Deletes and recreates .venv if Python version changes).
-- **Run Standard:** .venv\Scripts\python.exe main.py
-- **Run Admin (Required):** un_admin.bat
-"@
+- **Domain:** Python utilities and services for Optimad.
+- **Stack:** Python, FastAPI, pytest.
+- **Core Pattern:** Localized routes in app/[lang]/. Business logic in tRPC routers (server/routers/_app.ts).
+- **Data Safety:** Env validation via lib/env.ts. All DB access through Prisma.
 
- = @"
-# UI & Styling Guidelines
-
-## Styling & Components
-- **Framework:** 	kinter + 	tkbootstrap.
-- Do NOT use web-based frameworks or HTML/CSS logic. Keep it strictly native Python UI.
+## Non-Obvious Workflows
+- Use Bun for all operations.

@@ -1,17 +1,10 @@
-# .cursorrules - Agent Experience & Code SEO
-
+# .cursorrules — Guardrails + Links
 @.github/instructions/01-architecture-and-stack.md
 @.github/instructions/02-ui-and-styling.md
 @.github/instructions/03-testing-and-linting.md
 @.github/instructions/04-ai-workflow.md
 
 IMPORTANT: Read all referenced files before starting any task.
-
-# --- Output Style ---
-- Short sentences. No fluff. No "I'll help you with".
-- No explanations unless asked. Code only when code needed.
-- Bad: "I'll now proceed to implement the authentication middleware..."
-- Good: "Done. middleware.ts updated."
 
 # --- Safety Guardrails (Deny List) ---
 NEVER run the following without explicit confirmation:
@@ -23,5 +16,4 @@ ALWAYS ask for permission before:
 # --- Code SEO & Brevity ---
 - Use complete domain names (e.g., OrderProcessor not OrdSvc).
 - Before adding new code, search for existing similar patterns to avoid duplication.
-- Split large files into smaller, focused modules (Brevity).
-- Use agent-browser for autonomous UI validation (Testability).
+- Split large files into smaller, focused modules.

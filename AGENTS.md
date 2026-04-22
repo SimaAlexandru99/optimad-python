@@ -1,16 +1,13 @@
-# System Instructions Pointer
+# Optimad Python — Agent Entry Point
 
-## Output Style
-- Short sentences. No fluff. No "I'll help you with".
-- No explanations unless asked. Code only when code needed.
-- Bad: "I'll now proceed to implement the authentication middleware..."
-- Good: "Done. middleware.ts updated."
+See [CLAUDE.md](CLAUDE.md) for canonical agent instructions.
 
-**CRITICAL INSTRUCTION:**
-Before assisting the user, you MUST read the instruction files located in the .github/instructions/ directory.
+## Token Optimization
+- **RTK**: Prefix shell commands with `rtk` for 60-90% compressed output.
+  - `rtk git status`, `rtk git diff`, `rtk npm test`, etc.
+  - On failure: full output saved to tee log — read it, don't re-run.
+- **code-review-graph**: Use graph tools before Grep/Glob/Read to explore codebase.
+  - Faster, fewer tokens, structural context (callers, dependents, test coverage).
+  - Build once: `code-review-graph build`
 
-Please read:
-- .github/instructions/01-architecture-and-stack.md
-- .github/instructions/02-ui-and-styling.md
-- .github/instructions/03-testing-and-linting.md
-- .github/instructions/04-ai-workflow.md
+This file exists for agents that prefer AGENTS.md over CLAUDE.md.

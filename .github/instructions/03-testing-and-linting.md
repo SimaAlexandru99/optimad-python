@@ -1,5 +1,5 @@
-# Testing & Linting Guidelines
+# Quality Guardrails
 
-## Testing (Pytest)
-- **Framework:** pytest.
-- Ensure tests that modify the system date or mock system calls clean up their state.
+- **Linter:** bunx ultracite fix handles formatting/logic errors.
+- **Tests:** Vitest (tests/) and Playwright (e2e/).
+- **Bug Fixes:** Always write a reproduction test case first.
